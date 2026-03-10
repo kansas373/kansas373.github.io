@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UST - Unified Structural Theory | 3D Particle Simulation</title>
+<meta name="description" content="Interactive 3D simulation of particle physics emerging from geometric substrate. Four integers: {5, 7, 24, 40}. Zero free parameters.">
+<meta property="og:title" content="Unified Structural Theory - 3D Particle Simulation">
+<meta property="og:description" content="Every particle. Every decay. Four integers. Zero free parameters. Click to explore.">
+<meta property="og:type" content="website">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000008;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    color: #fff;
+    width: 100vw;
+    height: 100vh;
+  }
+  #canvas3d { width: 100%; height: 100%; display: block; }
+  #topBar {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: 15px 20px;
+    background: linear-gradient(180deg, rgba(0,0,8,0.92) 0%, transparent 100%);
+    pointer-events: none; z-index: 10;
+  }
+  #topBar h1 {
+    color: #00ffcc; font-size: 20px; font-weight: bold;
+    letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(0,255,204,0.5);
+    margin: 0;
+  }
+  #topBar .sub {
+    color: #4488aa; font-size: 11px; letter-spacing: 2px; margin-top: 2px;
+  }
+  #bottomBar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 15px 20px;
+    background: linear-gradient(0deg, rgba(0,0,8,0.95) 0%, transparent 100%);
+    z-index: 10;
+  }
+  #infoText {
+    color: #00ff88; font-size: 13px; margin-bottom: 8px;
+    text-shadow: 0 0 10px rgba(0,255,136,0.3);
+  }
+  #statsRow {
+    display: flex; gap: 20px; flex-wrap: wrap; align-items: center;
+  }
+  #statsRow span { color: #ffcc00; font-size: 11px; }
+  #statsRow .credit { color: #666; font-size: 10px; }
+  #rungLegend {
+    display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap;
+  }
+  .rungDot {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .rungDot .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .rungDot .label { color: #888; font-size: 10px; }
+  #controls {
+    position: absolute; top: 50%; right: 15px; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 8px; z-index: 10;
+  }
+  #controls button {
+    background: rgba(0,255,204,0.1); border: 1px solid rgba(0,255,204,0.3);
+    color: #00ffcc; padding: 8px 12px; cursor: pointer;
+    font-size: 14px; border-radius: 4px; font-family: 'Courier New', monospace;
+  }
+  #controls button:hover { background: rgba(0,255,204,0.25); }
+  #speedLabel { color: #00ffcc; font-size: 10px; text-align: center; }
+  #particlePanel {
+    position: absolute; top: 80px; left: 20px;
+    background: rgba(0,4,16,0.92); border: 1px solid rgba(0,255,204,0.3);
+    border-radius: 8px; padding: 18px 22px; min-width: 240px;
+    display: none; z-index: 20;
+    backdrop-filter: blur(10px);
+  }
+  #particlePanel.visible { display: block; }
+  #particlePanel .header {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+  }
+  #particlePanel .colorDot {
+    width: 28px; height: 28px; border-radius: 50%;
+  }
+  #particlePanel .pname {
+    font-size: 22px; font-weight: bold; letter-spacing: 1px;
+  }
+  #particlePanel .row {
+    color: #aaa; font-size: 12px; margin-bottom: 6px;
+  }
+  #particlePanel .row span { color: #fff; }
+  #particlePanel .row .cyan { color: #00ffcc; }
+  #particlePanel .row .yellow { color: #ffcc00; }
+  #particlePanel .row .orange { color: #ff8844; }
+  #zoomOutBtn {
+    margin-top: 14px; background: rgba(255,68,68,0.15);
+    border: 1px solid rgba(255,68,68,0.4); color: #ff6666;
+    padding: 6px 16px; cursor: pointer; font-size: 11px;
+    border-radius: 4px; width: 100%; letter-spacing: 1px;
+    font-family: 'Courier New', monospace;
+  }
+  #zoomOutBtn:hover { background: rgba(255,68,68,0.3); }
+  #hint {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    color: rgba(0,255,204,0.4); font-size: 13px; letter-spacing: 2px;
+    pointer-events: none; z-index: 5;
+    animation: fadeHint 4s ease-out forwards;
+  }
+  @keyframes fadeHint {
+    0% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<canvas id="canvas3d"></canvas>
+
+<div id="topBar">
+  <h1>UNIFIED STRUCTURAL THEORY</h1>
+  <div class="sub">GEOMETRIC STRUCTURAL SIMULATION | PSL(2,7) = 168 = 7 x 24</div>
+</div>
+
+<div id="bottomBar">
+  <div id="infoText">UST Geometric Structural Simulation | {5, 7, 24, 40}</div>
+  <div id="statsRow">
+    <span>DECAYS: <span id="decayNum" style="color:#ff4444">0</span></span>
+    <span>N_A=5 | N_B=7 | N_F4=24 | N_C=40</span>
+    <span>|PSL(2,7)| = 168</span>
+    <span class="credit">Stephen Cullor | Patent #63/987,905 | 2026</span>
+  </div>
+  <div id="rungLegend"></div>
+</div>
+
+<div id="controls">
+  <button onclick="changeSpeed(0.5)">+</button>
+  <div id="speedLabel">1.0x</div>
+  <button onclick="changeSpeed(-0.5)">-</button>
+</div>
+
+<div id="particlePanel">
+  <div class="header">
+    <div class="colorDot" id="ppDot"></div>
+    <div class="pname" id="ppName"></div>
+  </div>
+  <div class="row">Type: <span id="ppType"></span></div>
+  <div class="row">Mass: <span class="cyan" id="ppMass"></span></div>
+  <div class="row">Charge: <span class="yellow" id="ppCharge"></span></div>
+  <div class="row">Rung: <span class="orange" id="ppRung"></span></div>
+  <div class="row">Substrate coupling via drag function</div>
+  <button id="zoomOutBtn" onclick="zoomOut()">ZOOM OUT</button>
+</div>
+
+<div id="hint">CLICK ANY PARTICLE TO EXPLORE</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ============================================================
+// UST CONSTANTS
+// ============================================================
+const N_A = 5, N_B = 7, N_F4 = 24, N_C = 40;
+const KAPPA = 4 / N_B;
+const EPS = 1 / (10 * N_B);
+const PSL27 = N_B * N_F4;
+
+const RUNG_COLORS = [0xff0044, 0xff8800, 0xffff00, 0x44ff00, 0x00ffcc, 0x0088ff, 0xaa44ff];
+const RUNG_CSS = ["#ff0044","#ff8800","#ffff00","#44ff00","#00ffcc","#0088ff","#aa44ff"];
+
+// Build legend
+const legend = document.getElementById("rungLegend");
+for (let i = 0; i < 7; i++) {
+  const d = document.createElement("div");
+  d.className = "rungDot";
+  d.innerHTML = '<div class="dot" style="background:'+RUNG_CSS[i]+';box-shadow:0 0 6px '+RUNG_CSS[i]+'"></div><span class="label">'+i+'/7</span>';
+  legend.appendChild(d);
+}
+
+// Particles
+const PARTICLES = [
+  {name:"e",mass:0.000511,charge:-1,type:"lepton",n7:3,color:0x00ffff},
+  {name:"\u03BC",mass:0.1057,charge:-1,type:"lepton",n7:4,color:0x00ccff},
+  {name:"\u03C4",mass:1.777,charge:-1,type:"lepton",n7:5,color:0x0088ff},
+  {name:"u",mass:0.0022,charge:0.67,type:"quark",n7:2,color:0xff4444},
+  {name:"d",mass:0.0047,charge:-0.33,type:"quark",n7:3,color:0xff6644},
+  {name:"s",mass:0.095,charge:-0.33,type:"quark",n7:4,color:0xff8844},
+  {name:"c",mass:1.275,charge:0.67,type:"quark",n7:5,color:0xffaa44},
+  {name:"b",mass:4.18,charge:-0.33,type:"quark",n7:6,color:0xffcc44},
+  {name:"t",mass:173.0,charge:0.67,type:"quark",n7:0,color:0xffee44},
+  {name:"W",mass:80.4,charge:1,type:"boson",n7:6,color:0xffff00},
+  {name:"Z",mass:91.2,charge:0,type:"boson",n7:0,color:0xeedd00},
+  {name:"\u03B3",mass:0,charge:0,type:"boson",n7:0,color:0xffffff},
+  {name:"g",mass:0,charge:0,type:"boson",n7:0,color:0x44ff44},
+  {name:"\u03C0\u00B1",mass:0.1396,charge:1,type:"meson",n7:4,color:0xff66ff},
+  {name:"K\u00B1",mass:0.4937,charge:1,type:"meson",n7:4,color:0xdd44ff},
+  {name:"p",mass:0.9383,charge:1,type:"baryon",n7:3,color:0x44ffaa},
+  {name:"n",mass:0.9396,charge:0,type:"baryon",n7:3,color:0x44ff88},
+  {name:"\u039B",mass:1.1157,charge:0,type:"baryon",n7:4,color:0x88ffcc},
+  {name:"\u03A3",mass:1.1926,charge:1,type:"baryon",n7:4,color:0x66ffbb},
+  {name:"\u039E",mass:1.3149,charge:-1,type:"baryon",n7:5,color:0xaaffdd},
+  {name:"\u03A9",mass:1.6725,charge:-1,type:"baryon",n7:5,color:0xccffee},
+  {name:"\u03C694",mass:94.15,charge:0,type:"scalar",n7:0,color:0xff0088},
+];
+
+const DECAYS = [
+  {parent:"\u03C0\u00B1",daughters:["\u03BC","\u03B3"]},
+  {parent:"K\u00B1",daughters:["\u03C0\u00B1","\u03C0\u00B1"]},
+  {parent:"n",daughters:["p","e","\u03B3"]},
+  {parent:"\u039B",daughters:["p","\u03C0\u00B1"]},
+  {parent:"\u03A3",daughters:["\u039B","\u03B3"]},
+  {parent:"\u039E",daughters:["\u039B","\u03C0\u00B1"]},
+  {parent:"\u03A9",daughters:["\u039B","K\u00B1"]},
+  {parent:"Z",daughters:["e","e"]},
+  {parent:"W",daughters:["\u03BC","\u03B3"]},
+  {parent:"t",daughters:["W","b"]},
+];
+
+function findParticle(name) {
+  return PARTICLES.find(function(p) { return p.name === name; }) || PARTICLES[0];
+}
+
+// ============================================================
+// THREE.JS SETUP
+// ============================================================
+var canvas = document.getElementById("canvas3d");
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setClearColor(0x000008);
+
+var scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000008, 0.007);
+
+var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 500);
+camera.position.set(0, 12, 25);
+
+// Lights
+scene.add(new THREE.AmbientLight(0x111122, 0.5));
+var pl1 = new THREE.PointLight(0x4488ff, 1.5, 100);
+pl1.position.set(10, 20, 10);
+scene.add(pl1);
+var pl2 = new THREE.PointLight(0xff4488, 0.8, 100);
+pl2.position.set(-15, -10, -10);
+scene.add(pl2);
+
+// ============================================================
+// HEXAGONAL SUBSTRATE
+// ============================================================
+var substrateGroup = new THREE.Group();
+var hexRadius = 1.2;
+var layers = 6;
+
+function buildHex(cx, cy, cz, r, fade) {
+  var verts = [];
+  for (var i = 0; i < 6; i++) {
+    var a1 = (i * Math.PI * 2) / 6;
+    var a2 = ((i + 1) * Math.PI * 2) / 6;
+    verts.push(cx, cy, cz);
+    verts.push(cx + Math.cos(a1) * r, cy, cz + Math.sin(a1) * r);
+    verts.push(cx + Math.cos(a2) * r, cy, cz + Math.sin(a2) * r);
+  }
+  return verts;
+}
+
+// Build all hex cells
+var allVerts = [];
+// Center
+allVerts = allVerts.concat(buildHex(0, 0, 0, hexRadius, 1));
+// Rings
+for (var ring = 1; ring <= layers; ring++) {
+  for (var side = 0; side < 6; side++) {
+    for (var pos = 0; pos < ring; pos++) {
+      var a = (side * Math.PI * 2) / 6;
+      var aNext = ((side + 1) * Math.PI * 2) / 6;
+      var cx = (Math.cos(a) * ring + Math.cos(aNext) * pos) * hexRadius * Math.sqrt(3);
+      var cz = (Math.sin(a) * ring + Math.sin(aNext) * pos) * hexRadius * Math.sqrt(3);
+      var cy = Math.sin(ring * 0.5 + pos * 0.3) * 0.15;
+      allVerts = allVerts.concat(buildHex(cx, cy, cz, hexRadius * 0.9, 1 - ring / (layers + 1)));
+    }
+  }
+}
+
+var hexGeom = new THREE.BufferGeometry();
+hexGeom.setAttribute("position", new THREE.Float32BufferAttribute(allVerts, 3));
+var hexMat = new THREE.MeshBasicMaterial({
+  color: 0x0a2040, transparent: true, opacity: 0.25,
+  side: THREE.DoubleSide, depthWrite: false
+});
+substrateGroup.add(new THREE.Mesh(hexGeom, hexMat));
+
+// Wireframe edges
+var edgeMat = new THREE.LineBasicMaterial({ color: 0x1a3a5a, transparent: true, opacity: 0.3 });
+function addHexEdge(cx, cz, r, y) {
+  var pts = [];
+  for (var i = 0; i <= 6; i++) {
+    var angle = (i * Math.PI * 2) / 6;
+    pts.push(new THREE.Vector3(cx + Math.cos(angle) * r, y, cz + Math.sin(angle) * r));
+  }
+  var g = new THREE.BufferGeometry().setFromPoints(pts);
+  substrateGroup.add(new THREE.Line(g, edgeMat));
+}
+addHexEdge(0, 0, hexRadius, 0);
+for (var ring = 1; ring <= layers; ring++) {
+  for (var side = 0; side < 6; side++) {
+    for (var pos = 0; pos < ring; pos++) {
+      var a = (side * Math.PI * 2) / 6;
+      var aNext = ((side + 1) * Math.PI * 2) / 6;
+      var cx = (Math.cos(a) * ring + Math.cos(aNext) * pos) * hexRadius * Math.sqrt(3);
+      var cz = (Math.sin(a) * ring + Math.sin(aNext) * pos) * hexRadius * Math.sqrt(3);
+      addHexEdge(cx, cz, hexRadius * 0.9, Math.sin(ring * 0.5) * 0.15);
+    }
+  }
+}
+scene.add(substrateGroup);
+
+// ============================================================
+// RUNG RINGS
+// ============================================================
+var rungMeshes = [];
+for (var n = 0; n < N_B; n++) {
+  var radius = 3 + n * 2.5;
+  var rGeom = new THREE.TorusGeometry(radius, 0.03, 8, 128);
+  var rMat = new THREE.MeshBasicMaterial({ color: RUNG_COLORS[n], transparent: true, opacity: 0.5 });
+  var rMesh = new THREE.Mesh(rGeom, rMat);
+  rMesh.rotation.x = Math.PI / 2;
+  rMesh.position.y = 0.5;
+  scene.add(rMesh);
+  rungMeshes.push(rMesh);
+  // Glow
+  var gGeom = new THREE.TorusGeometry(radius, 0.12, 8, 128);
+  var gMat = new THREE.MeshBasicMaterial({ color: RUNG_COLORS[n], transparent: true, opacity: 0.08 });
+  var gMesh = new THREE.Mesh(gGeom, gMat);
+  gMesh.rotation.x = Math.PI / 2;
+  gMesh.position.y = 0.5;
+  scene.add(gMesh);
+}
+
+// ============================================================
+// STAR FIELD
+// ============================================================
+var starCount = 2000;
+var starGeom = new THREE.BufferGeometry();
+var starPos = new Float32Array(starCount * 3);
+var starCol = new Float32Array(starCount * 3);
+for (var i = 0; i < starCount; i++) {
+  var r = 80 + Math.random() * 150;
+  var theta = Math.random() * Math.PI * 2;
+  var phi = Math.acos(2 * Math.random() - 1);
+  starPos[i*3] = r * Math.sin(phi) * Math.cos(theta);
+  starPos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+  starPos[i*3+2] = r * Math.cos(phi);
+  var b = 0.3 + Math.random() * 0.7;
+  starCol[i*3] = b * (0.8 + Math.random() * 0.2);
+  starCol[i*3+1] = b * (0.8 + Math.random() * 0.2);
+  starCol[i*3+2] = b;
+}
+starGeom.setAttribute("position", new THREE.Float32BufferAttribute(starPos, 3));
+starGeom.setAttribute("color", new THREE.Float32BufferAttribute(starCol, 3));
+scene.add(new THREE.Points(starGeom, new THREE.PointsMaterial({ size: 0.3, vertexColors: true, transparent: true, opacity: 0.8 })));
+
+// ============================================================
+// PARTICLES
+// ============================================================
+var particles = [];
+var particleMeshes = [];
+
+function createParticle(pData, angle) {
+  var rungR = 3 + pData.n7 * 2.5;
+  var a = angle !== undefined ? angle : Math.random() * Math.PI * 2;
+  var ms = Math.max(0.15, Math.min(0.8, Math.log10(pData.mass + 1) * 0.3 + 0.3));
+  var geom = new THREE.SphereGeometry(ms, 16, 16);
+  var mat = new THREE.MeshPhongMaterial({
+    color: pData.color, emissive: pData.color, emissiveIntensity: 0.6,
+    transparent: true, opacity: 0.9
+  });
+  var mesh = new THREE.Mesh(geom, mat);
+  var x = Math.cos(a) * rungR;
+  var z = Math.sin(a) * rungR;
+  mesh.position.set(x, 0.5 + ms, z);
+
+  // Glow sprite
+  var sMat = new THREE.SpriteMaterial({ color: pData.color, transparent: true, opacity: 0.3, depthWrite: false });
+  var sprite = new THREE.Sprite(sMat);
+  sprite.scale.set(ms * 4, ms * 4, 1);
+  mesh.add(sprite);
+
+  scene.add(mesh);
+  var obj = {
+    mesh: mesh, data: pData, angle: a, rungRadius: rungR,
+    velocity: (0.02 + Math.random() * 0.03) / (1 + pData.mass * 0.01),
+    alive: true, age: 0, massScale: ms
+  };
+  particles.push(obj);
+  particleMeshes.push(mesh);
+  return obj;
+}
+
+PARTICLES.forEach(function(p, i) {
+  createParticle(p, (i / PARTICLES.length) * Math.PI * 2);
+});
+
+// ============================================================
+// DECAY SYSTEM
+// ============================================================
+var decayEvents = [];
+var decayCount = 0;
+
+function triggerDecay() {
+  var def = DECAYS[Math.floor(Math.random() * DECAYS.length)];
+  var pData = findParticle(def.parent);
+  var rungR = 3 + pData.n7 * 2.5;
+  var angle = Math.random() * Math.PI * 2;
+  var ox = Math.cos(angle) * rungR;
+  var oz = Math.sin(angle) * rungR;
+  var oy = 0.5;
+
+  // Flash
+  var fGeom = new THREE.SphereGeometry(0.5, 16, 16);
+  var fMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1.0 });
+  var flash = new THREE.Mesh(fGeom, fMat);
+  flash.position.set(ox, oy, oz);
+  scene.add(flash);
+
+  var daughters = def.daughters.map(function(dName, i) {
+    var dData = findParticle(dName);
+    var dAngle = angle + ((i - 0.5) * Math.PI) / 3 + (Math.random() - 0.5) * 0.5;
+    var speed = 0.3 + Math.random() * 0.4;
+    var dGeom = new THREE.SphereGeometry(0.12, 8, 8);
+    var dMat = new THREE.MeshBasicMaterial({ color: dData.color, transparent: true, opacity: 0.9 });
+    var dMesh = new THREE.Mesh(dGeom, dMat);
+    dMesh.position.set(ox, oy, oz);
+    scene.add(dMesh);
+
+    // Trail
+    var trailPts = [];
+    for (var t = 0; t < 50; t++) trailPts.push(new THREE.Vector3(ox, oy, oz));
+    var tGeom = new THREE.BufferGeometry().setFromPoints(trailPts);
+    var tMat = new THREE.LineBasicMaterial({ color: dData.color, transparent: true, opacity: 0.6 });
+    var tLine = new THREE.Line(tGeom, tMat);
+    scene.add(tLine);
+
+    return {
+      mesh: dMesh, trail: tLine, trailPos: trailPts.map(function(p) { return p.clone(); }),
+      vx: Math.cos(dAngle) * speed, vy: (Math.random() - 0.3) * 0.2,
+      vz: Math.sin(dAngle) * speed, age: 0, data: dData
+    };
+  });
+
+  decayEvents.push({ flash: flash, daughters: daughters, age: 0, parentName: def.parent });
+  decayCount++;
+  document.getElementById("decayNum").textContent = decayCount;
+  document.getElementById("infoText").textContent = pData.name + " \u2192 " + def.daughters.join(" + ") + " | UST decay engine | \u0393 = 2\u03B1\u03C0 \u00B7 p* \u00B7 BW\u00B2 \u00B7 drag \u00B7 (1 + \u03BA ln N_cas)";
+}
+
+// ============================================================
+// CAMERA CONTROLS
+// ============================================================
+var camState = { theta: 0.3, phi: 0.8, radius: 28, autoRotate: true };
+var mouseState = { down: false, prevX: 0, prevY: 0 };
+var focusTarget = null;
+var simSpeed = 1;
+var clickStart = { time: 0, x: 0, y: 0 };
+var raycaster = new THREE.Raycaster();
+
+canvas.addEventListener("mousedown", function(e) {
+  mouseState.down = true;
+  mouseState.prevX = e.clientX;
+  mouseState.prevY = e.clientY;
+  camState.autoRotate = false;
+  clickStart.time = Date.now();
+  clickStart.x = e.clientX;
+  clickStart.y = e.clientY;
+});
+
+canvas.addEventListener("mousemove", function(e) {
+  if (!mouseState.down) return;
+  var dx = e.clientX - mouseState.prevX;
+  var dy = e.clientY - mouseState.prevY;
+  camState.theta -= dx * 0.005;
+  camState.phi = Math.max(0.2, Math.min(Math.PI - 0.2, camState.phi + dy * 0.005));
+  mouseState.prevX = e.clientX;
+  mouseState.prevY = e.clientY;
+});
+
+canvas.addEventListener("mouseup", function(e) {
+  mouseState.down = false;
+  var elapsed = Date.now() - clickStart.time;
+  var dist = Math.sqrt(Math.pow(e.clientX - clickStart.x, 2) + Math.pow(e.clientY - clickStart.y, 2));
+  if (elapsed < 300 && dist < 10) handleClick(e.clientX, e.clientY);
+  setTimeout(function() { if (!focusTarget) camState.autoRotate = true; }, 3000);
+});
+
+canvas.addEventListener("wheel", function(e) {
+  camState.radius = Math.max(8, Math.min(60, camState.radius + e.deltaY * 0.02));
+});
+
+// Touch
+canvas.addEventListener("touchstart", function(e) {
+  e.preventDefault();
+  var t = e.touches[0];
+  mouseState.down = true;
+  mouseState.prevX = t.clientX;
+  mouseState.prevY = t.clientY;
+  camState.autoRotate = false;
+  clickStart.time = Date.now();
+  clickStart.x = t.clientX;
+  clickStart.y = t.clientY;
+}, { passive: false });
+
+canvas.addEventListener("touchmove", function(e) {
+  e.preventDefault();
+  if (!mouseState.down) return;
+  var t = e.touches[0];
+  var dx = t.clientX - mouseState.prevX;
+  var dy = t.clientY - mouseState.prevY;
+  camState.theta -= dx * 0.005;
+  camState.phi = Math.max(0.2, Math.min(Math.PI - 0.2, camState.phi + dy * 0.005));
+  mouseState.prevX = t.clientX;
+  mouseState.prevY = t.clientY;
+}, { passive: false });
+
+canvas.addEventListener("touchend", function(e) {
+  mouseState.down = false;
+  var t = e.changedTouches[0];
+  var elapsed = Date.now() - clickStart.time;
+  var dist = Math.sqrt(Math.pow(t.clientX - clickStart.x, 2) + Math.pow(t.clientY - clickStart.y, 2));
+  if (elapsed < 400 && dist < 15) handleClick(t.clientX, t.clientY);
+  setTimeout(function() { if (!focusTarget) camState.autoRotate = true; }, 3000);
+});
+
+function handleClick(cx, cy) {
+  var rect = canvas.getBoundingClientRect();
+  var mouse = new THREE.Vector2(
+    ((cx - rect.left) / rect.width) * 2 - 1,
+    -((cy - rect.top) / rect.height) * 2 + 1
+  );
+  raycaster.setFromCamera(mouse, camera);
+  var hits = raycaster.intersectObjects(particleMeshes, false);
+  if (hits.length > 0) {
+    var hitMesh = hits[0].object;
+    var hitP = particles.find(function(p) { return p.mesh === hitMesh; });
+    if (hitP) {
+      focusTarget = hitP;
+      camState.autoRotate = false;
+      showPanel(hitP.data);
+    }
+  } else {
+    zoomOut();
+  }
+}
+
+function showPanel(pData) {
+  var panel = document.getElementById("particlePanel");
+  var c = "#" + pData.color.toString(16).padStart(6, "0");
+  document.getElementById("ppDot").style.background = c;
+  document.getElementById("ppDot").style.boxShadow = "0 0 15px " + c;
+  document.getElementById("ppName").textContent = pData.name;
+  document.getElementById("ppName").style.color = c;
+  document.getElementById("ppName").style.textShadow = "0 0 15px " + c;
+  document.getElementById("ppType").textContent = pData.type.charAt(0).toUpperCase() + pData.type.slice(1);
+  document.getElementById("ppMass").textContent = pData.mass + " GeV";
+  document.getElementById("ppCharge").textContent = pData.charge;
+  document.getElementById("ppRung").textContent = pData.n7 + "/7";
+  panel.classList.add("visible");
+  document.getElementById("infoText").textContent = "FOCUSED: " + pData.name + " | " + pData.type + " | Mass: " + pData.mass + " GeV | Rung: " + pData.n7 + "/7";
+}
+
+function zoomOut() {
+  focusTarget = null;
+  document.getElementById("particlePanel").classList.remove("visible");
+  camState.autoRotate = true;
+  document.getElementById("infoText").textContent = "UST Geometric Structural Simulation | {5, 7, 24, 40}";
+}
+
+function changeSpeed(delta) {
+  simSpeed = Math.max(0.1, Math.min(5, simSpeed + delta));
+  document.getElementById("speedLabel").textContent = simSpeed.toFixed(1) + "x";
+}
+
+// ============================================================
+// ANIMATION
+// ============================================================
+var clock = new THREE.Clock();
+var decayTimer = 0;
+var decayInterval = 3;
+
+function animate() {
+  requestAnimationFrame(animate);
+  var delta = clock.getDelta() * simSpeed;
+  var time = clock.getElapsedTime();
+
+  // Camera
+  if (focusTarget && focusTarget.mesh) {
+    var tp = focusTarget.mesh.position;
+    var fd = 3 + focusTarget.massScale * 4;
+    var tx = tp.x + fd * Math.sin(time * 0.3);
+    var ty = tp.y + fd * 0.7;
+    var tz = tp.z + fd * Math.cos(time * 0.3);
+    camera.position.x += (tx - camera.position.x) * 0.04;
+    camera.position.y += (ty - camera.position.y) * 0.04;
+    camera.position.z += (tz - camera.position.z) * 0.04;
+    camera.lookAt(tp.x, tp.y, tp.z);
+  } else {
+    if (camState.autoRotate && !mouseState.down) camState.theta += delta * 0.08;
+    var dx = camState.radius * Math.sin(camState.phi) * Math.cos(camState.theta);
+    var dy = camState.radius * Math.cos(camState.phi) + 5;
+    var dz = camState.radius * Math.sin(camState.phi) * Math.sin(camState.theta);
+    camera.position.x += (dx - camera.position.x) * 0.05;
+    camera.position.y += (dy - camera.position.y) * 0.05;
+    camera.position.z += (dz - camera.position.z) * 0.05;
+    camera.lookAt(0, 1, 0);
+  }
+
+  // Substrate rotation
+  substrateGroup.rotation.y += delta * 0.02;
+
+  // Rung pulse
+  rungMeshes.forEach(function(ring, i) {
+    ring.material.opacity = 0.4 + Math.sin(time * 0.5 + i * 0.9) * 0.15;
+  });
+
+  // Particle orbits
+  particles.forEach(function(p) {
+    if (!p.alive) return;
+    p.angle += p.velocity * delta;
+    p.age += delta;
+    var wobble = Math.sin(p.age * 2 + p.data.n7) * 0.1;
+    p.mesh.position.x = Math.cos(p.angle) * p.rungRadius;
+    p.mesh.position.z = Math.sin(p.angle) * p.rungRadius;
+    p.mesh.position.y = 0.5 + p.massScale + wobble;
+    var s = 1 + Math.sin(time * 3 + p.angle) * 0.1;
+    p.mesh.scale.set(s, s, s);
+  });
+
+  // Decay timer
+  decayTimer += delta;
+  if (decayTimer > decayInterval) {
+    decayTimer = 0;
+    triggerDecay();
+  }
+
+  // Animate decays
+  decayEvents.forEach(function(ev) {
+    ev.age += delta;
+    if (ev.flash) {
+      var fs = 1 + ev.age * 3;
+      ev.flash.scale.set(fs, fs, fs);
+      ev.flash.material.opacity = Math.max(0, 1 - ev.age * 2);
+    }
+    ev.daughters.forEach(function(d) {
+      d.age += delta;
+      d.mesh.position.x += d.vx * delta * 8;
+      d.mesh.position.y += d.vy * delta * 8;
+      d.mesh.position.z += d.vz * delta * 8;
+      d.vx *= (1 - delta * 0.3);
+      d.vz *= (1 - delta * 0.3);
+      d.vy -= delta * 0.05;
+      // Trail update
+      d.trailPos.pop();
+      d.trailPos.unshift(d.mesh.position.clone());
+      var posArr = new Float32Array(d.trailPos.length * 3);
+      d.trailPos.forEach(function(tp, idx) {
+        posArr[idx*3] = tp.x; posArr[idx*3+1] = tp.y; posArr[idx*3+2] = tp.z;
+      });
+      d.trail.geometry.setAttribute("position", new THREE.Float32BufferAttribute(posArr, 3));
+      d.trail.geometry.attributes.position.needsUpdate = true;
+      d.mesh.material.opacity = Math.max(0, 1 - d.age * 0.3);
+      d.trail.material.opacity = Math.max(0, 0.6 - d.age * 0.15);
+    });
+  });
+
+  // Cleanup
+  decayEvents = decayEvents.filter(function(ev) {
+    if (ev.age > 5) {
+      if (ev.flash) scene.remove(ev.flash);
+      ev.daughters.forEach(function(d) { scene.remove(d.mesh); scene.remove(d.trail); });
+      return false;
+    }
+    return true;
+  });
+
+  renderer.render(scene, camera);
+}
+
+// Resize
+window.addEventListener("resize", function() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+animate();
+</script>
+</body>
+</html>
